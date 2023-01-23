@@ -1,11 +1,13 @@
 package com.faizurazadri.biometriclogin;
 
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.biometric.BiometricManager;
 import androidx.biometric.BiometricPrompt;
@@ -19,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding mainBinding;
 
+    @RequiresApi(api = Build.VERSION_CODES.R)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -40,7 +43,7 @@ public class MainActivity extends AppCompatActivity {
                     @Override
                     public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                         super.onAuthenticationSucceeded(result);
-                        Toast.makeText(getApplicationContext(), "Auth succeeded", Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(), "Auth Berhasil", Toast.LENGTH_LONG).show();
                     }
 
                     @Override
@@ -52,7 +55,9 @@ public class MainActivity extends AppCompatActivity {
 
         mainBinding.btnFingerprint.setOnClickListener(view -> {
             BiometricPrompt.PromptInfo.Builder promptInfo = dialogMetric();
-            promptInfo.setNegativeButtonText("Cancel");
+            promptInfo.setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+            //promptInfo.setNegativeButtonText("Cancel");
+            promptInfo.setConfirmationRequired(false);
             biometricPrompt.authenticate(promptInfo.build());
         });
     }
@@ -61,10 +66,11 @@ public class MainActivity extends AppCompatActivity {
         return new BiometricPrompt.PromptInfo.Builder().setTitle("Biometric login").setSubtitle("Login using yout biometric credential");
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.R)
     private void checkBiometrictSSupported() {
         String information = "";
         BiometricManager biometricManager = BiometricManager.from(this);
-        switch (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.BIOMETRIC_STRONG)) {
+        switch (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_WEAK | BiometricManager.Authenticators.DEVICE_CREDENTIAL)) {
             case BiometricManager.BIOMETRIC_SUCCESS:
                 information = "App can authenticate using biometrics";
                 enableButon(true);
@@ -82,7 +88,9 @@ public class MainActivity extends AppCompatActivity {
 
             case BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED:
                 information = "Need register at least one fingerprint";
-                enableButon(false, true);
+                Intent enrollIntent = new Intent(Settings.ACTION_BIOMETRIC_ENROLL);
+                enrollIntent.putExtra(Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED, BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.BIOMETRIC_WEAK);
+                startActivity(enrollIntent);
                 break;
 
             default:
@@ -95,15 +103,5 @@ public class MainActivity extends AppCompatActivity {
 
     void enableButon(boolean enable) {
         mainBinding.btnFingerprint.setEnabled(enable);
-    }
-
-    void enableButon(boolean enable, boolean enroll) {
-        enableButon(enable);
-
-        if (!enroll) return;
-
-        Intent enrollIntent = new Intent(Settings.ACTION_BIOMETRIC_ENROLL);
-        enrollIntent.putExtra(Settings.EXTRA_BIOMETRIC_AUTHENTICATORS_ALLOWED, BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.BIOMETRIC_WEAK);
-        startActivity(enrollIntent);
     }
 }
